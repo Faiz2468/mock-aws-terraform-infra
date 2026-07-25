@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  ministack:
+    image: ministackorg/ministack
+    container_name: ministack
+    ports:
+      - "4566:4566"   # unified AWS-compatible endpoint
+    environment:
+      - PERSIST_STATE=1
+      - STATE_DIR=/data/ministack-state
+    volumes:
+      - "./.ministack-data:/data"
