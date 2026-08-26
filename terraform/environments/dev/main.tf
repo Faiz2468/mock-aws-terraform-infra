@@ -25,9 +25,9 @@ module "iam" {
 }
 
 module "compute" {
-  source                = "../../modules/compute"
-  name_prefix           = local.name_prefix
-  subnet_id             = module.networking.public_subnet_id
-  security_group_id     = module.networking.security_group_id
-  iam_instance_profile  = module.iam.instance_profile_name
+  source               = "../../modules/compute"
+  name_prefix          = local.name_prefix
+  subnet_id            = module.networking.public_subnet_id
+  security_group_id    = module.networking.security_group_id
+  iam_instance_profile = module.iam.instance_profile_name
 }
