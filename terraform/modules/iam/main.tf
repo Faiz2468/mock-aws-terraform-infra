@@ -1,9 +1,9 @@
-# --- IAM layer ----------------------------------------------------------
-# Demonstrates least-privilege role design: an EC2 instance role that
-# can only read/write to the one S3 bucket it needs, nothing else.
+# --- IAM module ------------------------------------------------------------
+# Least-privilege role for an EC2 instance, scoped to exactly one S3
+# bucket (passed in from the compute module's output).
 
 resource "aws_iam_role" "ec2_app_role" {
-  name = "faiz-cloud-demo-ec2-role"
+  name = "${var.name_prefix}-ec2-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -20,7 +20,7 @@ resource "aws_iam_role" "ec2_app_role" {
 }
 
 resource "aws_iam_policy" "s3_read_write" {
-  name        = "faiz-cloud-demo-s3-access"
+  name        = "${var.name_prefix}-s3-access"
   description = "Least-privilege access to the app's S3 bucket only"
 
   policy = jsonencode({
@@ -34,8 +34,8 @@ resource "aws_iam_policy" "s3_read_write" {
           "s3:ListBucket"
         ]
         Resource = [
-          aws_s3_bucket.app_data.arn,
-          "${aws_s3_bucket.app_data.arn}/*"
+          var.s3_bucket_arn,
+          "${var.s3_bucket_arn}/*"
         ]
       }
     ]
@@ -48,6 +48,6 @@ resource "aws_iam_role_policy_attachment" "attach_s3_policy" {
 }
 
 resource "aws_iam_instance_profile" "ec2_app_profile" {
-  name = "faiz-cloud-demo-ec2-profile"
+  name = "${var.name_prefix}-ec2-profile"
   role = aws_iam_role.ec2_app_role.name
 }

@@ -1,14 +1,15 @@
-# --- Networking layer -------------------------------------------------
-# Demonstrates VPC design: CIDR planning, public subnet, security group
-# with least-privilege ingress rules.
+# --- Networking module ---------------------------------------------------
+# VPC, public subnet, internet gateway, route table, and a security group
+# with least-privilege ingress rules. Reusable across environments by
+# passing different CIDR ranges and a name_prefix.
 
 resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
+  cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
 
   tags = {
-    Name = "faiz-cloud-demo-vpc"
+    Name = "${var.name_prefix}-vpc"
   }
 }
 
@@ -16,18 +17,18 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "faiz-cloud-demo-igw"
+    Name = "${var.name_prefix}-igw"
   }
 }
 
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
-  cidr_block               = "10.0.1.0/24"
+  cidr_block               = var.public_subnet_cidr
   map_public_ip_on_launch = true
-  availability_zone        = "us-east-1a"
+  availability_zone        = var.availability_zone
 
   tags = {
-    Name = "faiz-cloud-demo-public-subnet"
+    Name = "${var.name_prefix}-public-subnet"
   }
 }
 
@@ -40,7 +41,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "faiz-cloud-demo-public-rt"
+    Name = "${var.name_prefix}-public-rt"
   }
 }
 
@@ -50,7 +51,7 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_security_group" "web" {
-  name        = "faiz-cloud-demo-web-sg"
+  name        = "${var.name_prefix}-web-sg"
   description = "Allow inbound HTTP/HTTPS and SSH only, all outbound"
   vpc_id      = aws_vpc.main.id
 
@@ -86,6 +87,6 @@ resource "aws_security_group" "web" {
   }
 
   tags = {
-    Name = "faiz-cloud-demo-web-sg"
+    Name = "${var.name_prefix}-web-sg"
   }
 }
