@@ -21,9 +21,16 @@ resource "aws_internet_gateway" "main" {
   }
 }
 
+# VPC Flow Logs intentionally omitted for this mock/demo environment —
+# would require a CloudWatch log group + IAM role in a real deployment.
+# Accepted as documented risk rather than adding infra MiniStack can't exercise.
+#tfsec:ignore:aws-ec2-require-vpc-flow-logs-for-all-vpcs
 resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidr
+  vpc_id     = aws_vpc.main.id
+  cidr_block = var.public_subnet_cidr
+
+  # Public IP is intentional — this is a public-facing web subnet.
+  #tfsec:ignore:aws-ec2-no-public-ip-subnet
   map_public_ip_on_launch = true
   availability_zone       = var.availability_zone
 
@@ -84,6 +91,9 @@ resource "aws_security_group" "web" {
     cidr_blocks = [var.admin_cidr]
   }
 
+  # Unrestricted egress accepted for this demo — a real deployment would
+  # scope this to required destinations (package repos, APIs, etc.).
+  #tfsec:ignore:aws-ec2-no-public-egress-sgr
   egress {
     description = "Allow all outbound traffic"
     from_port   = 0

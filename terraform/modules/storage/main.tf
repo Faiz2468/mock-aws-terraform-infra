@@ -29,6 +29,10 @@ resource "aws_s3_bucket_public_access_block" "app_data" {
   restrict_public_buckets = true
 }
 
+# SSE-S3 (AES256) used here rather than a customer-managed KMS key —
+# accepted for this mock environment; a real deployment would add a KMS
+# key with its own rotation/key policy.
+#tfsec:ignore:aws-s3-encryption-customer-key
 resource "aws_s3_bucket_server_side_encryption_configuration" "app_data" {
   bucket = aws_s3_bucket.app_data.id
 
@@ -49,12 +53,22 @@ resource "aws_s3_bucket_logging" "app_data" {
 
 # --- Access logging target bucket ------------------------------------------
 # Separate bucket to receive S3 server access logs from app_data.
+# This bucket doesn't log itself (it IS the log destination) — tfsec's
+# generic check still flags it, so that finding is accepted/documented.
+#tfsec:ignore:aws-s3-enable-bucket-logging
 
 resource "aws_s3_bucket" "access_logs" {
   bucket = "${var.name_prefix}-access-logs"
 
   tags = {
     Name = "${var.name_prefix}-access-logs"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "access_logs" {
+  bucket = aws_s3_bucket.access_logs.id
+  versioning_configuration {
+    status = "Enabled"
   }
 }
 
@@ -67,6 +81,7 @@ resource "aws_s3_bucket_public_access_block" "access_logs" {
   restrict_public_buckets = true
 }
 
+#tfsec:ignore:aws-s3-encryption-customer-key
 resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs" {
   bucket = aws_s3_bucket.access_logs.id
 
