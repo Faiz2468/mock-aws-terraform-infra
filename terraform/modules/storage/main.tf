@@ -56,7 +56,6 @@ resource "aws_s3_bucket_logging" "app_data" {
 # This bucket doesn't log itself (it IS the log destination) — tfsec's
 # generic check still flags it, so that finding is accepted/documented.
 #tfsec:ignore:aws-s3-enable-bucket-logging
-
 resource "aws_s3_bucket" "access_logs" {
   bucket = "${var.name_prefix}-access-logs"
 
