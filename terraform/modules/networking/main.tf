@@ -52,9 +52,13 @@ resource "aws_route_table_association" "public" {
 
 resource "aws_security_group" "web" {
   name        = "${var.name_prefix}-web-sg"
-  description = "Allow inbound HTTP/HTTPS and SSH only, all outbound"
+  description = "Allow inbound HTTP/HTTPS from anywhere (public web server) and SSH restricted to admin CIDR; all outbound"
   vpc_id      = aws_vpc.main.id
 
+  # Public web ports — intentionally open since this is a public-facing web server.
+  # tfsec flags these as critical by default; documented here as an accepted risk
+  # rather than suppressed silently.
+  #tfsec:ignore:aws-ec2-no-public-ingress-sgr
   ingress {
     description = "HTTP"
     from_port   = 80
@@ -63,6 +67,7 @@ resource "aws_security_group" "web" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  #tfsec:ignore:aws-ec2-no-public-ingress-sgr
   ingress {
     description = "HTTPS"
     from_port   = 443
@@ -72,14 +77,15 @@ resource "aws_security_group" "web" {
   }
 
   ingress {
-    description = "SSH (restrict this to your IP in real deployments)"
+    description = "SSH restricted to admin CIDR"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.admin_cidr]
   }
 
   egress {
+    description = "Allow all outbound traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"

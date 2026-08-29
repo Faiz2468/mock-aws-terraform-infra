@@ -11,6 +11,17 @@ resource "aws_instance" "app_server" {
   vpc_security_group_ids = [var.security_group_id]
   iam_instance_profile   = var.iam_instance_profile
 
+  metadata_options {
+    http_tokens                 = "required" # enforce IMDSv2
+    http_endpoint               = "enabled"
+    http_put_response_hop_limit = 1
+  }
+
+  root_block_device {
+    encrypted   = true
+    volume_type = "gp3"
+  }
+
   tags = {
     Name = "${var.name_prefix}-app-server"
   }
