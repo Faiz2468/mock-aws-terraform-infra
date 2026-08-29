@@ -3,6 +3,10 @@
 # with least-privilege ingress rules. Reusable across environments by
 # passing different CIDR ranges and a name_prefix.
 
+# VPC Flow Logs intentionally omitted for this mock/demo environment —
+# would require a CloudWatch log group + IAM role in a real deployment.
+# Accepted as documented risk rather than adding infra MiniStack can't exercise.
+#tfsec:ignore:aws-ec2-require-vpc-flow-logs-for-all-vpcs
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
@@ -21,10 +25,6 @@ resource "aws_internet_gateway" "main" {
   }
 }
 
-# VPC Flow Logs intentionally omitted for this mock/demo environment —
-# would require a CloudWatch log group + IAM role in a real deployment.
-# Accepted as documented risk rather than adding infra MiniStack can't exercise.
-#tfsec:ignore:aws-ec2-require-vpc-flow-logs-for-all-vpcs
 resource "aws_subnet" "public" {
   vpc_id     = aws_vpc.main.id
   cidr_block = var.public_subnet_cidr
