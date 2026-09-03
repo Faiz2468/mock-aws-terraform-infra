@@ -1,0 +1,34 @@
+stages:
+  - fmt
+  - validate
+  - lint
+  - security
+
+fmt_check:
+  stage: fmt
+  image: hashicorp/terraform:1.7.5
+  script:
+    - cd terraform
+    - terraform fmt -check -recursive
+
+terraform_validate:
+  stage: validate
+  image: hashicorp/terraform:1.7.5
+  script:
+    - cd terraform/environments/dev
+    - terraform init -backend=false
+    - terraform validate
+
+tflint:
+  stage: lint
+  image: ghcr.io/terraform-linters/tflint:latest
+  script:
+    - cd terraform
+    - tflint --init
+    - tflint --recursive
+
+tfsec:
+  stage: security
+  image: aquasec/tfsec:latest
+  script:
+    - tfsec ./terraform
