@@ -64,6 +64,44 @@ This mirrors how a real security review works: not every finding gets
 tradeoffs, but every decision is documented rather than silently
 suppressed.
 
+## Disaster recovery
+
+**Scenario:** a critical object in the app data bucket (`faiz-cloud-dev-app-data`) is accidentally overwritten or corrupted, for example by a bad deploy script or human error.
+
+**Mechanism:** S3 versioning is enabled on the bucket in `terraform/modules/storage`. Every write creates a new version instead of destroying the old one, so earlier states stay recoverable after an overwrite.
+
+**Recovery drill (run against MiniStack):**
+
+```bash
+# 0. Seed test data
+echo "critical business data - v1" > test-file.txt
+aws --endpoint-url=http://localhost:4566 s3 cp test-file.txt s3://faiz-cloud-dev-app-data/ --checksum-algorithm SHA256
+
+# 1. Simulate the incident: overwrite with corrupted content
+echo "CORRUPTED - accidental overwrite v2" > test-file.txt
+aws --endpoint-url=http://localhost:4566 s3 cp test-file.txt s3://faiz-cloud-dev-app-data/ --checksum-algorithm SHA256
+
+# 2. Find the last known-good version
+aws --endpoint-url=http://localhost:4566 s3api list-object-versions --bucket faiz-cloud-dev-app-data --no-cli-pager
+
+# 3. Download that specific version
+aws --endpoint-url=http://localhost:4566 s3api get-object --bucket faiz-cloud-dev-app-data --key test-file.txt --version-id <VersionId> restored-file.txt
+
+# 4. Re-upload it as the current live version
+aws --endpoint-url=http://localhost:4566 s3 cp restored-file.txt s3://faiz-cloud-dev-app-data/test-file.txt --checksum-algorithm SHA256
+
+# 5. Verify
+aws --endpoint-url=http://localhost:4566 s3 cp s3://faiz-cloud-dev-app-data/test-file.txt -
+```
+
+**Recovery targets:**
+- **RPO:** near zero. Versioning captures every write, so nothing written before the incident is lost.
+- **RTO:** under 5 minutes. The drill above took a few minutes by hand, with no data reconstruction needed.
+
+**Notes:**
+- `--checksum-algorithm SHA256` is needed because MiniStack doesn't support the AWS CLI's newer default checksum type. Real S3 doesn't need it.
+- MiniStack didn't honor `?versionId=` in a `copy-object` source, so the drill uses download-then-re-upload instead. Against real S3, `copy-object` with a version ID also works.
+
 ## Running it locally
 
 ```bash
@@ -71,7 +109,7 @@ suppressed.
 docker compose up -d
 
 # 2. Provision the mock AWS stack
-cd terraform
+cd terraform/environments/dev
 terraform init
 terraform plan
 terraform apply
@@ -95,6 +133,7 @@ docker compose down
 - Automated security scanning (tfsec) integrated into CI, with a
   documented remediation and risk-acceptance process
 - CI validation on every pull request
+- Disaster recovery: S3 versioning-based restore drill with documented RPO/RTO targets
 
 ## Notes
 
