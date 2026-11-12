@@ -102,6 +102,25 @@ aws --endpoint-url=http://localhost:4566 s3 cp s3://faiz-cloud-dev-app-data/test
 - `--checksum-algorithm SHA256` is needed because MiniStack doesn't support the AWS CLI's newer default checksum type. Real S3 doesn't need it.
 - MiniStack didn't honor `?versionId=` in a `copy-object` source, so the drill uses download-then-re-upload instead. Against real S3, `copy-object` with a version ID also works.
 
+## CloudFormation equivalent
+
+`cloudformation/storage.yaml` provisions the same storage layer as `terraform/modules/storage` (an app data bucket and an access logs bucket, with versioning, AES256 encryption, public access blocked and access logging), written as a CloudFormation template. It lets the same infrastructure be compared across both IaC tools.
+
+```bash
+# Lint the template
+pip install cfn-lint
+cfn-lint cloudformation/storage.yaml
+
+# Deploy to MiniStack
+aws --endpoint-url=http://localhost:4566 cloudformation create-stack --stack-name faiz-storage --template-body file://cloudformation/storage.yaml
+
+# Check the stack and the buckets
+aws --endpoint-url=http://localhost:4566 cloudformation describe-stacks --stack-name faiz-storage --no-cli-pager
+aws --endpoint-url=http://localhost:4566 s3 ls
+```
+
+**Emulator limitation:** the template passes `cfn-lint` cleanly and the stack reaches `CREATE_COMPLETE`. Against MiniStack, versioning was applied, but `BucketEncryption` and `PublicAccessBlockConfiguration` were not (`get-bucket-encryption` and `get-public-access-block` report nothing configured). That appears to be a gap in MiniStack's CloudFormation engine rather than the template. Access logging was not checked, and the template has not been run against real AWS.
+
 ## Running it locally
 
 ```bash
@@ -134,6 +153,7 @@ docker compose down
   documented remediation and risk-acceptance process
 - CI validation on every pull request
 - Disaster recovery: S3 versioning-based restore drill with documented RPO/RTO targets
+- CloudFormation: the storage layer written as a lint-checked template (`cfn-lint`) and deployed to MiniStack alongside the Terraform version, with the emulator's limits documented
 
 ## Notes
 
