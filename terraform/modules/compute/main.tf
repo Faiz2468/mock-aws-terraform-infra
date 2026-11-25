@@ -10,6 +10,8 @@ resource "aws_instance" "app_server" {
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [var.security_group_id]
   iam_instance_profile   = var.iam_instance_profile
+  monitoring             = true
+  ebs_optimized          = true
 
   metadata_options {
     http_tokens                 = "required" # enforce IMDSv2

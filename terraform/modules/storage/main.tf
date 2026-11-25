@@ -6,6 +6,10 @@ variable "name_prefix" {
 # --- Primary data bucket ---------------------------------------------------
 
 resource "aws_s3_bucket" "app_data" {
+  #checkov:skip=CKV_AWS_145:SSE-S3 (AES256) used instead of a customer-managed KMS key; accepted for this mock environment
+  #checkov:skip=CKV_AWS_144:Cross-region replication adds cost and a second region that MiniStack cannot exercise; accepted demo trade-off
+  #checkov:skip=CKV2_AWS_61:Lifecycle rules not needed for a short-lived demo bucket; a real deployment would define retention
+  #checkov:skip=CKV2_AWS_62:Event notifications need a downstream target (SNS/SQS/Lambda) that this demo does not have
   bucket = "${var.name_prefix}-app-data"
 
   tags = {
@@ -29,7 +33,7 @@ resource "aws_s3_bucket_public_access_block" "app_data" {
   restrict_public_buckets = true
 }
 
-# SSE-S3 (AES256) used here rather than a customer-managed KMS key —
+# SSE-S3 (AES256) used here rather than a customer-managed KMS key -
 # accepted for this mock environment; a real deployment would add a KMS
 # key with its own rotation/key policy.
 #tfsec:ignore:aws-s3-encryption-customer-key
@@ -53,10 +57,14 @@ resource "aws_s3_bucket_logging" "app_data" {
 
 # --- Access logging target bucket ------------------------------------------
 # Separate bucket to receive S3 server access logs from app_data.
-# This bucket doesn't log itself (it IS the log destination) — tfsec's
+# This bucket doesn't log itself (it IS the log destination) - tfsec's
 # generic check still flags it, so that finding is accepted/documented.
 #tfsec:ignore:aws-s3-enable-bucket-logging
 resource "aws_s3_bucket" "access_logs" {
+  #checkov:skip=CKV_AWS_145:SSE-S3 (AES256) used instead of a customer-managed KMS key; accepted for this mock environment
+  #checkov:skip=CKV_AWS_144:Cross-region replication adds cost and a second region that MiniStack cannot exercise; accepted demo trade-off
+  #checkov:skip=CKV2_AWS_61:Lifecycle rules not needed for a short-lived demo log bucket; a real deployment would expire old logs
+  #checkov:skip=CKV2_AWS_62:Event notifications need a downstream target (SNS/SQS/Lambda) that this demo does not have
   bucket = "${var.name_prefix}-access-logs"
 
   tags = {

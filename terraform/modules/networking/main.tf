@@ -3,17 +3,27 @@
 # with least-privilege ingress rules. Reusable across environments by
 # passing different CIDR ranges and a name_prefix.
 
-# VPC Flow Logs intentionally omitted for this mock/demo environment —
+# VPC Flow Logs intentionally omitted for this mock/demo environment -
 # would require a CloudWatch log group + IAM role in a real deployment.
 # Accepted as documented risk rather than adding infra MiniStack can't exercise.
 #tfsec:ignore:aws-ec2-require-vpc-flow-logs-for-all-vpcs
 resource "aws_vpc" "main" {
+  #checkov:skip=CKV2_AWS_11:Flow logs need a CloudWatch log group and IAM role that MiniStack cannot exercise; accepted demo risk
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
 
   tags = {
     Name = "${var.name_prefix}-vpc"
+  }
+}
+
+# Lock down the VPC's default security group: no rules means no traffic.
+resource "aws_default_security_group" "default" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "${var.name_prefix}-default-sg-locked"
   }
 }
 
@@ -26,10 +36,11 @@ resource "aws_internet_gateway" "main" {
 }
 
 resource "aws_subnet" "public" {
+  #checkov:skip=CKV_AWS_130:Public IP is intentional - this is a public-facing web subnet
   vpc_id     = aws_vpc.main.id
   cidr_block = var.public_subnet_cidr
 
-  # Public IP is intentional — this is a public-facing web subnet.
+  # Public IP is intentional - this is a public-facing web subnet.
   #tfsec:ignore:aws-ec2-no-public-ip-subnet
   map_public_ip_on_launch = true
   availability_zone       = var.availability_zone
@@ -58,11 +69,14 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_security_group" "web" {
+  #checkov:skip=CKV_AWS_260:Port 80 is intentionally open for a public-facing web server
+  #checkov:skip=CKV_AWS_382:Unrestricted egress accepted for this demo; a real deployment would scope it
+  #checkov:skip=CKV2_AWS_5:Attached to the EC2 instance in the compute module via a variable; Checkov cannot trace across module boundaries
   name        = "${var.name_prefix}-web-sg"
   description = "Allow inbound HTTP/HTTPS from anywhere (public web server) and SSH restricted to admin CIDR; all outbound"
   vpc_id      = aws_vpc.main.id
 
-  # Public web ports — intentionally open since this is a public-facing web server.
+  # Public web ports - intentionally open since this is a public-facing web server.
   # tfsec flags these as critical by default; documented here as an accepted risk
   # rather than suppressed silently.
   #tfsec:ignore:aws-ec2-no-public-ingress-sgr
@@ -91,7 +105,7 @@ resource "aws_security_group" "web" {
     cidr_blocks = [var.admin_cidr]
   }
 
-  # Unrestricted egress accepted for this demo — a real deployment would
+  # Unrestricted egress accepted for this demo - a real deployment would
   # scope this to required destinations (package repos, APIs, etc.).
   #tfsec:ignore:aws-ec2-no-public-egress-sgr
   egress {
